@@ -3,8 +3,6 @@ use serde::Serialize;
 use sqlx::postgres::{PgPool, PgPoolOptions};
 use warp::{reply::Json, Filter, Rejection};
 
-mod docs;
-
 #[derive(Serialize)]
 struct Rotation {
     start_date: NaiveDate,
@@ -45,9 +43,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .or(rotation_latest),
     );
 
-    warp::serve(docs::openapi_docs().or(v1))
-        .run(([127, 0, 0, 1], 3030))
-        .await;
+    warp::serve(v1).run(([127, 0, 0, 1], 3030)).await;
 
     Ok(())
 }

@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"/>
+    <title>api.fabianlars.de</title>
+    <link href="https://cdn.jsdelivr.net/npm/swagger-ui-dist@3/swagger-ui.css" rel="stylesheet">
+</head>
+<body>
+<div id="swagger-ui"></div>
+<script charset="UTF-8" src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@3/swagger-ui-bundle.js"></script>
+<script>
+    window.onload = function () {
+        const ui = SwaggerUIBundle({
+            "dom_id": "\#swagger-ui",
+            presets: [
+                SwaggerUIBundle.presets.apis,
+                SwaggerUIBundle.SwaggerUIStandalonePreset
+            ],
+            layout: "BaseLayout",
+            deepLinking: true,
+            showExtensions: true,
+            showCommonExtensions: true,
+            url: "/openapi.json",
+        })
+        window.ui = ui;
+    };
+</script>
+</body>
+</html>
