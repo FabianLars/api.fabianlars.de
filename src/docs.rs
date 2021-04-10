@@ -1,6 +1,3 @@
-use warp::filters::BoxedFilter;
-use warp::{Filter, Rejection, Reply};
-
 const HTML: &str = r#"
             <!doctype html>
             <html lang="en">
@@ -33,7 +30,7 @@ const HTML: &str = r#"
         "#;
 
 pub(crate) fn openapi_docs(
-) -> impl Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
+) -> impl warp::Filter<Extract = impl warp::Reply, Error = warp::Rejection> + Clone {
     let json = warp::path("openapi.json").and(warp::fs::file("./openapi.json"));
     let docs = warp::path("docs").map(move || warp::reply::html(HTML));
     let docs_root = warp::path::end().map(move || warp::reply::html(HTML));
