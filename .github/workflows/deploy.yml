@@ -49,7 +49,7 @@ jobs:
               run: cargo build --release
 
             - name: Move files
-              run: mkdir target/release/dist/ && mv target/release/api target/release/dist/backend && mv openapi.json target/release/dist/openapi.json
+              run: mkdir -p target/release/dist/ && mv target/release/api target/release/dist/backend && mv openapi.json target/release/dist/openapi.json
 
             - name: Publish
               uses: easingthemes/ssh-deploy@master
