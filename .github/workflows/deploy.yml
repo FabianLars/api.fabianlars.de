@@ -37,7 +37,7 @@ jobs:
             - uses: actions/cache@v2
               with:
                   path: |
-                      ~/.cargo/registry
+                    ~/.cargo/registry
                     ~/.cargo/git
                     target
                   key: backend-cache-${{ hashFiles('**/Cargo.lock') }}
