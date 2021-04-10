@@ -3,6 +3,8 @@ use serde::Serialize;
 use sqlx::postgres::{PgPool, PgPoolOptions};
 use warp::{reply::Json, Filter, Rejection};
 
+mod docs;
+
 #[derive(Serialize)]
 struct Rotation {
     start_date: NaiveDate,
@@ -43,7 +45,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .or(rotation_latest),
     );
 
-    warp::serve(v1).run(([127, 0, 0, 1], 3030)).await;
+    warp::serve(docs::openapi_docs().or(v1))
+        .run(([127, 0, 0, 1], 3030))
+        .await;
 
     Ok(())
 }
@@ -70,28 +74,38 @@ async fn get_champion(id: u16) -> Result<String, Rejection> {
 }
 
 async fn get_rotations(pool: PgPool) -> Result<Json, Rejection> {
-    let rows = sqlx::query_as!(Rotation, "SELECT start_date, end_date, champions FROM rotations")
-        .fetch_all(&pool)
-        .await
-        .map_err(|_| warp::reject::not_found())?;
+    let rows = sqlx::query_as!(
+        Rotation,
+        "SELECT start_date, end_date, champions FROM rotations"
+    )
+    .fetch_all(&pool)
+    .await
+    .map_err(|_| warp::reject::not_found())?;
 
     Ok(warp::reply::json(&rows))
 }
 
 async fn get_rotation(id: u16, pool: PgPool) -> Result<Json, Rejection> {
-    let row = sqlx::query_as!(Rotation, "SELECT start_date, end_date, champions FROM rotations LIMIT 1 OFFSET $1", (id - 1) as i32)
-        .fetch_one(&pool)
-        .await
-        .map_err(|_| warp::reject::not_found())?;
+    let row = sqlx::query_as!(
+        Rotation,
+        "SELECT start_date, end_date, champions FROM rotations LIMIT 1 OFFSET $1",
+        (id - 1) as i32
+    )
+    .fetch_one(&pool)
+    .await
+    .map_err(|_| warp::reject::not_found())?;
 
     Ok(warp::reply::json(&row))
 }
 
 async fn get_rotation_latest(pool: PgPool) -> Result<Json, Rejection> {
-    let row = sqlx::query_as!(Rotation, "SELECT start_date, end_date, champions FROM rotations ORDER BY id DESC LIMIT 1")
-        .fetch_one(&pool)
-        .await
-        .map_err(|_| warp::reject::not_found())?;
+    let row = sqlx::query_as!(
+        Rotation,
+        "SELECT start_date, end_date, champions FROM rotations ORDER BY id DESC LIMIT 1"
+    )
+    .fetch_one(&pool)
+    .await
+    .map_err(|_| warp::reject::not_found())?;
 
     Ok(warp::reply::json(&row))
 }

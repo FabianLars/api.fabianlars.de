@@ -38,8 +38,8 @@ jobs:
               with:
                   path: |
                       ~/.cargo/registry
-                      ~/.cargo/git
-                      target
+                    ~/.cargo/git
+                    target
                   key: backend-cache-${{ hashFiles('**/Cargo.lock') }}
 
             - name: Set up rotations table
@@ -48,17 +48,17 @@ jobs:
             - name: Build
               run: cargo build --release
 
-            - name: Move file
-              run: mkdir target/release/dist/ && mv target/release/api target/release/dist/backend
+            - name: Move files
+              run: mkdir target/release/dist/ && mv target/release/api target/release/dist/backend && mv openapi.json target/release/dist/backend
 
             - name: Publish
               uses: easingthemes/ssh-deploy@master
               with:
-                  REMOTE_HOST: ${{ secrets.SERVER_IP }}
-                  REMOTE_USER: ${{ secrets.USERNAME }}
-                  SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-                  SOURCE: 'target/release/dist/'
-                  TARGET: '~/wwwbackend'
+                REMOTE_HOST: ${{ secrets.SERVER_IP }}
+                REMOTE_USER: ${{ secrets.USERNAME }}
+                SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+                SOURCE: 'target/release/dist/'
+                TARGET: '~/wwwbackend'
 
             - name: File permissions
               uses: appleboy/ssh-action@master
