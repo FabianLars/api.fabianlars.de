@@ -44,7 +44,7 @@ jobs:
                       ~/.cargo/registry
                       ~/.cargo/git
                       target
-                  key: test-cache-${{ hashFiles('**/Cargo.lock') }}
+                  key: ${{ runner.os }}-cache-${{ hashFiles('**/Cargo.toml') }}
 
             - name: Set up rotations table
               run: psql -U postgres -h 127.0.0.1 -d postgres -f backend/sql/rotations.sql
