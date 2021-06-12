@@ -148,7 +148,10 @@ async fn check_update(
 
     check_update_inner(app, platform, version)
         .await
-        .map_err(|_| reject::not_found())
+        .map_err(|err| {
+            log::error!("{:?}", err);
+            reject::not_found()
+        })
 }
 
 // helper
