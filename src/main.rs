@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use chrono::{DateTime, NaiveDate, Utc};
 use reqwest::StatusCode;
 use serde::Serialize;
@@ -165,10 +167,11 @@ async fn check_update_inner(
     platform: String,
     version: String,
 ) -> Result<WithStatus<Json>, anyhow::Error> {
-    let mut path_latest = dirs_next::home_dir().ok_or_else(|| anyhow::anyhow!(""))?;
-    path_latest.push(format!(
-        "cdn.fabianlars.de/releases/{}/latest/{}/",
-        &app, &platform
+    let path_latest = PathBuf::from(format!(
+        "{}/releases/{}/latest/{}/",
+        &std::env::var("CDN_DIR")?,
+        &app,
+        &platform
     ));
 
     let mut dir = tokio::fs::read_dir(path_latest).await?;
