@@ -139,17 +139,22 @@ async fn check_update(
     version: String,
 ) -> Result<WithStatus<Json>, Rejection> {
     if !["mw-toolbox"].contains(&app.as_str()) {
+        log::error!("provided app name isn't supported: \"{}\"", &app);
         return Err(reject::not_found());
     };
 
     if !["darwin", "win32", "win64", "linux"].contains(&platform.as_str()) {
+        log::error!(
+            "provided platform doesn't match isn't supported: \"{}\"",
+            &platform
+        );
         return Err(reject::not_found());
     };
 
     check_update_inner(app, platform, version)
         .await
         .map_err(|err| {
-            log::error!("{:?}", err);
+            log::error!("Error: {:?}", err);
             reject::not_found()
         })
 }
