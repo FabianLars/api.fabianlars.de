@@ -1,8 +1,11 @@
-use chrono::{NaiveDate, Utc};
+use chrono::{DateTime, NaiveDate, Utc};
+use reqwest::StatusCode;
 use serde::Serialize;
 use sqlx::postgres::{PgPool, PgPoolOptions};
+use version_compare::{CompOp, VersionCompare};
 use warp::{
-    reply::{Json, WithStatus},
+    reject,
+    reply::{self, Json, WithStatus},
     Filter, Rejection,
 };
 
@@ -75,20 +78,21 @@ fn with_db(
     warp::any().map(move || pool.clone())
 }
 
+// endpoint
 async fn get_champion(id: u16) -> Result<String, Rejection> {
     let file = tokio::fs::read_to_string("./champions.json")
         .await
-        .map_err(|_| warp::reject::not_found())?;
-    let json: serde_json::Value =
-        serde_json::from_str(&file).map_err(|_| warp::reject::not_found())?;
+        .map_err(|_| reject::not_found())?;
+    let json: serde_json::Value = serde_json::from_str(&file).map_err(|_| reject::not_found())?;
 
     if let Some(champ) = json.get(id.to_string()) {
         Ok(champ.to_string())
     } else {
-        Err(warp::reject::not_found())
+        Err(reject::not_found())
     }
 }
 
+// endpoint
 async fn get_rotations(pool: PgPool) -> Result<Json, Rejection> {
     let rows = sqlx::query_as!(
         Rotation,
@@ -96,11 +100,12 @@ async fn get_rotations(pool: PgPool) -> Result<Json, Rejection> {
     )
     .fetch_all(&pool)
     .await
-    .map_err(|_| warp::reject::not_found())?;
+    .map_err(|_| reject::not_found())?;
 
-    Ok(warp::reply::json(&rows))
+    Ok(reply::json(&rows))
 }
 
+// endpoint
 async fn get_rotation(id: u16, pool: PgPool) -> Result<Json, Rejection> {
     let row = sqlx::query_as!(
         Rotation,
@@ -109,11 +114,12 @@ async fn get_rotation(id: u16, pool: PgPool) -> Result<Json, Rejection> {
     )
     .fetch_one(&pool)
     .await
-    .map_err(|_| warp::reject::not_found())?;
+    .map_err(|_| reject::not_found())?;
 
-    Ok(warp::reply::json(&row))
+    Ok(reply::json(&row))
 }
 
+// endpoint
 async fn get_rotation_latest(pool: PgPool) -> Result<Json, Rejection> {
     let row = sqlx::query_as!(
         Rotation,
@@ -121,40 +127,42 @@ async fn get_rotation_latest(pool: PgPool) -> Result<Json, Rejection> {
     )
     .fetch_one(&pool)
     .await
-    .map_err(|_| warp::reject::not_found())?;
+    .map_err(|_| reject::not_found())?;
 
-    Ok(warp::reply::json(&row))
+    Ok(reply::json(&row))
 }
 
+// endpoint
 async fn check_update(
     app: String,
     platform: String,
     version: String,
 ) -> Result<WithStatus<Json>, Rejection> {
     if !["mw-toolbox"].contains(&app.as_str()) {
-        return Err(warp::reject::not_found());
+        return Err(reject::not_found());
     };
 
     if !["darwin", "win32", "win64", "linux"].contains(&platform.as_str()) {
-        return Err(warp::reject::not_found());
+        return Err(reject::not_found());
     };
 
-    let path_latest = if let Some(mut home) = dirs_next::home_dir() {
-        home.push(format!("wwwcdn/releases/{}/latest/{}/", &app, &platform));
-        home
-    } else {
-        return Err(warp::reject::not_found());
-    };
-
-    let mut dir = tokio::fs::read_dir(path_latest)
+    check_update_inner(app, platform, version)
         .await
-        .map_err(|_| warp::reject::not_found())?;
+        .map_err(|_| reject::not_found())
+}
 
-    while let Some(file) = dir
-        .next_entry()
-        .await
-        .map_err(|_| warp::reject::not_found())?
-    {
+// helper
+async fn check_update_inner(
+    app: String,
+    platform: String,
+    version: String,
+) -> Result<WithStatus<Json>, anyhow::Error> {
+    let mut path_latest = dirs_next::home_dir().ok_or_else(|| anyhow::anyhow!(""))?;
+    path_latest.push(format!("wwwcdn/releases/{}/latest/{}/", &app, &platform));
+
+    let mut dir = tokio::fs::read_dir(path_latest).await?;
+
+    while let Some(file) = dir.next_entry().await? {
         let file_path = file.path();
         if let Some(ext) = file_path.extension() {
             if ext == "sig" {
@@ -162,45 +170,38 @@ async fn check_update(
                     let file_name = file_name.to_string_lossy();
                     let file_name_splits: Vec<&str> = file_name.split('_').collect();
 
-                    if file_name_splits.len() >= 2 {
-                        if let Ok(comp) =
-                            version_compare::VersionCompare::compare(&file_name_splits[1], &version)
-                        {
-                            if comp == version_compare::CompOp::Gt {
-                                let mut pub_date = "".to_string();
-                                if let Ok(metadata) = file.metadata().await {
-                                    if let Ok(created) = metadata.created() {
-                                        pub_date = chrono::DateTime::<Utc>::from(created)
-                                            .format("%+")
-                                            .to_string();
-                                    }
-                                }
-                                let signature = tokio::fs::read_to_string(&file_path)
-                                    .await
-                                    .map_err(|_| warp::reject::not_found())?;
+                    if file_name_splits.len() >= 2
+                        && VersionCompare::compare(&file_name_splits[1], &version)
+                            .unwrap_or(CompOp::Lt)
+                            == CompOp::Gt
+                    {
+                        let created = file.metadata().await?.created()?;
+                        let pub_date = DateTime::<Utc>::from(created).format("%+").to_string();
 
-                                return Ok(warp::reply::with_status(warp::reply::json(&Update {
-                                    url: format!(
-                                        "https://cdn.fabianlars.de/releases/{}/latest/{}/{}",
-                                        &app,
-                                        &platform,
-                                        &file_name.replace(".sig", "")
-                                    ),
-                                    version: file_name_splits[1].to_string(),
-                                    notes: "No patch notes provided. You might want to check the project page on GitHub.".to_string(),
-                                    pub_date,
-                                    signature,
-                                }), warp::http::StatusCode::OK));
-                            }
-                        }
+                        let signature = tokio::fs::read_to_string(&file_path).await?;
+
+                        let url = format!(
+                            "https://cdn.fabianlars.de/releases/{}/latest/{}/{}",
+                            &app,
+                            &platform,
+                            &file_name.replace(".sig", "")
+                        );
+
+                        return Ok(reply::with_status(reply::json(&Update {
+                            url,
+                            version: file_name_splits[1].to_string(),
+                            notes: "No patch notes provided. You might want to check the project page on GitHub.".to_string(),
+                            pub_date,
+                            signature,
+                        }), StatusCode::OK));
                     }
                 }
             }
         }
     }
 
-    Ok(warp::reply::with_status(
-        warp::reply::json(&"No update available".to_string()),
-        warp::http::StatusCode::NO_CONTENT,
+    Ok(reply::with_status(
+        reply::json(&"No update available"),
+        StatusCode::NO_CONTENT,
     ))
 }

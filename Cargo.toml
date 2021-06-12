@@ -9,6 +9,7 @@ version = "0.1.0"
 panic = 'abort'
 
 [dependencies]
+anyhow = "1"
 chrono = {version = "0.4", features = ["serde"]}
 dirs-next = "2"
 futures = "0.3"
