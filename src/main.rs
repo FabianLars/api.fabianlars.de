@@ -139,9 +139,14 @@ async fn check_update(
         return Err(warp::reject::not_found());
     };
 
-    let path_latest = format!("~/wwwcdn/releases/{}/latest/{}/", &app, &platform);
+    let path_latest = if let Some(mut home) = dirs_next::home_dir() {
+        home.push(format!("wwwcdn/releases/{}/latest/{}/", &app, &platform));
+        home
+    } else {
+        return Err(warp::reject::not_found());
+    };
 
-    let mut dir = tokio::fs::read_dir(&path_latest)
+    let mut dir = tokio::fs::read_dir(path_latest)
         .await
         .map_err(|_| warp::reject::not_found())?;
 
