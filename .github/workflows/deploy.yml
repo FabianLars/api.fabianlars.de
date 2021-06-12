@@ -37,9 +37,9 @@ jobs:
             - uses: actions/cache@v2
               with:
                   path: |
-                    ~/.cargo/registry
-                    ~/.cargo/git
-                    target
+                      ~/.cargo/registry
+                      ~/.cargo/git
+                      target
                   key: ${{ runner.os }}-cache-${{ hashFiles('**/Cargo.toml') }}
 
             - name: Set up rotations table
@@ -54,11 +54,11 @@ jobs:
             - name: Publish
               uses: easingthemes/ssh-deploy@main
               with:
-                REMOTE_HOST: ${{ secrets.SERVER_IP }}
-                REMOTE_USER: ${{ secrets.USERNAME }}
-                SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-                SOURCE: 'dist/'
-                TARGET: '~/wwwbackend'
+                  REMOTE_HOST: ${{ secrets.SERVER_IP }}
+                  REMOTE_USER: ${{ secrets.USERNAME }}
+                  SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+                  SOURCE: 'dist/'
+                  TARGET: '~/wwwapi'
 
             - name: File permissions
               uses: appleboy/ssh-action@master
@@ -66,4 +66,4 @@ jobs:
                   host: ${{ secrets.SERVER_IP }}
                   username: ${{ secrets.USERNAME }}
                   key: ${{ secrets.SSH_PRIVATE_KEY }}
-                  script: cd ~/wwwbackend && sudo ./rights.sh && sudo systemctl daemon-reload && sudo systemctl restart fabianlars.de-backend.service
+                  script: cd ~/wwwapi && sudo ./rights.sh && sudo systemctl daemon-reload && sudo systemctl restart fabianlars.de-backend.service

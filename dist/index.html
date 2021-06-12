@@ -10,7 +10,7 @@
 <script charset="UTF-8" src="https://cdn.jsdelivr.net/npm/swagger-ui-dist@3/swagger-ui-bundle.js"></script>
 <script>
     window.onload = function () {
-        const ui = SwaggerUIBundle({
+        window.ui = SwaggerUIBundle({
             "dom_id": "\#swagger-ui",
             presets: [
                 SwaggerUIBundle.presets.apis,
@@ -21,8 +21,7 @@
             showExtensions: true,
             showCommonExtensions: true,
             url: "/openapi.json",
-        })
-        window.ui = ui;
+        });
     };
 </script>
 </body>

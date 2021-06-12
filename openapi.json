@@ -1,5 +1,5 @@
 {
-  "openapi": "3.0.1",
+  "openapi": "3.0.3",
   "info": {
     "title": "api.fabianlars.de",
     "description": "just some more or less random APIs\n\nv1/lol/ designed for use in LoL-Fandom wikis\n",
@@ -11,6 +11,85 @@
     }
   ],
   "paths": {
+    "/v1/update/{app}/{target}/{current_version}": {
+      "get": {
+        "description": "Endpoint for distributed apps to check for updates.",
+        "parameters": [
+          {
+            "name": "app",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "mw-toolbox"
+              ]
+            }
+          },
+          {
+            "name": "target",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "darwin",
+                "win32",
+                "win64",
+                "linux"
+              ]
+            }
+          },
+          {
+            "name": "current_version",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Ok",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "url": {
+                      "type": "string"
+                    },
+                    "version": {
+                      "type": "string"
+                    },
+                    "notes": {
+                      "type": "string"
+                    },
+                    "pub_date": {
+                      "type": "string"
+                    },
+                    "signature": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "example": {
+                  "url": "https://mycompany.example.com/myapp/releases/myrelease.tar.gz",
+                  "version": "0.0.1",
+                  "notes": "Theses are some release notes",
+                  "pub_date": "2020-09-18T12:29:53+01:00",
+                  "signature": ""
+                }
+              }
+            }
+          },
+          "204": {
+            "description": "No update available"
+          }
+        }
+      }
+    },
     "/v1/lol/rotations": {
       "get": {
         "description": "Get all champion rotations",
@@ -39,7 +118,41 @@
                     }
                   }
                 },
-                "examples": {}
+                "example": [
+                  {
+                    "start_date": "2009-11-20",
+                    "end_date": "2009-12-01",
+                    "champions": [
+                      "Ashe",
+                      "Blitzcrank",
+                      "Corki",
+                      "Jax",
+                      "Heimerdinger",
+                      "Master Yi",
+                      "Ryze",
+                      "Sion",
+                      "Taric",
+                      "Warwick"
+                    ]
+                  },
+                  {
+                    "start_date": "2009-12-01",
+                    "end_date": "2009-12-08",
+                    "champions": [
+                      "Annie",
+                      "Ashe",
+                      "Blitzcrank",
+                      "Katarina",
+                      "Gangplank",
+                      "Ryze",
+                      "Singed",
+                      "Teemo",
+                      "Udyr",
+                      "Zilean"
+                    ]
+                  },
+                  "..."
+                ]
               }
             }
           }
@@ -82,7 +195,7 @@
                   }
                 },
                 "examples": {
-                  "0": {
+                  "latest": {
                     "value": "{\"start_date\":\"2021-04-06\",\"end_date\":\"2021-04-13\",\"champions\":[\"Aatrox\",\"Aphelios\",\"Cho'Gath\",\"Draven\",\"Fizz\",\"Galio\",\"Leona\",\"Lissandra\",\"Olaf\",\"Senna\",\"Swain\",\"Sylas\",\"Taliyah\",\"Xin Zhao\",\"Zac\"]}"
                   }
                 }
@@ -138,7 +251,7 @@
                   }
                 },
                 "examples": {
-                  "0": {
+                  "1": {
                     "value": "{\"start_date\":\"2009-11-20\",\"end_date\":\"2009-12-01\",\"champions\":[\"Ashe\",\"Blitzcrank\",\"Corki\",\"Jax\",\"Heimerdinger\",\"Master Yi\",\"Ryze\",\"Sion\",\"Taric\",\"Warwick\"]}"
                   }
                 }

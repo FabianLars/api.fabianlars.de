@@ -1,13 +1,25 @@
-use chrono::NaiveDate;
+use chrono::{NaiveDate, Utc};
 use serde::Serialize;
 use sqlx::postgres::{PgPool, PgPoolOptions};
-use warp::{reply::Json, Filter, Rejection};
+use warp::{
+    reply::{Json, WithStatus},
+    Filter, Rejection,
+};
 
 #[derive(Serialize)]
 struct Rotation {
     start_date: NaiveDate,
     end_date: NaiveDate,
     champions: Vec<String>,
+}
+
+#[derive(Serialize)]
+struct Update {
+    url: String,
+    version: String,
+    notes: String,
+    pub_date: String,
+    signature: String,
 }
 
 #[tokio::main]
@@ -18,6 +30,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .max_connections(5)
         .connect(&std::env::var("DATABASE_URL")?)
         .await?;
+
+    /* Start of League of Legends Endpoints */
 
     let rotations = warp::path!("lol" / "rotations")
         .and(with_db(pool.clone()))
@@ -35,12 +49,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let champion = warp::path!("lol" / "champions" / u16).and_then(get_champion);
 
+    /* End of League of Legends Endpoints */
+
+    // mw-toolbox updater
+    let update = warp::path!("update" / String / String / String).and_then(check_update);
+
     let v1 = warp::path!("v1" / ..).and(
         champions
             .or(champion)
             .or(rotations)
             .or(rotation)
-            .or(rotation_latest),
+            .or(rotation_latest)
+            .or(update),
     );
 
     warp::serve(v1).run(([127, 0, 0, 1], 3030)).await;
@@ -104,4 +124,78 @@ async fn get_rotation_latest(pool: PgPool) -> Result<Json, Rejection> {
     .map_err(|_| warp::reject::not_found())?;
 
     Ok(warp::reply::json(&row))
+}
+
+async fn check_update(
+    app: String,
+    platform: String,
+    version: String,
+) -> Result<WithStatus<Json>, Rejection> {
+    if !["mw-toolbox"].contains(&app.as_str()) {
+        return Err(warp::reject::not_found());
+    };
+
+    if !["darwin", "win32", "win64", "linux"].contains(&platform.as_str()) {
+        return Err(warp::reject::not_found());
+    };
+
+    let path_latest = format!("~/wwwcdn/releases/{}/latest/{}/", &app, &platform);
+
+    let mut dir = tokio::fs::read_dir(&path_latest)
+        .await
+        .map_err(|_| warp::reject::not_found())?;
+
+    while let Some(file) = dir
+        .next_entry()
+        .await
+        .map_err(|_| warp::reject::not_found())?
+    {
+        let file_path = file.path();
+        if let Some(ext) = file_path.extension() {
+            if ext == "sig" {
+                if let Some(file_name) = file_path.file_name() {
+                    let file_name = file_name.to_string_lossy();
+                    let file_name_splits: Vec<&str> = file_name.split('_').collect();
+
+                    if file_name_splits.len() >= 2 {
+                        if let Ok(comp) =
+                            version_compare::VersionCompare::compare(&file_name_splits[1], &version)
+                        {
+                            if comp == version_compare::CompOp::Gt {
+                                let mut pub_date = "".to_string();
+                                if let Ok(metadata) = file.metadata().await {
+                                    if let Ok(created) = metadata.created() {
+                                        pub_date = chrono::DateTime::<Utc>::from(created)
+                                            .format("%+")
+                                            .to_string();
+                                    }
+                                }
+                                let signature = tokio::fs::read_to_string(&file_path)
+                                    .await
+                                    .map_err(|_| warp::reject::not_found())?;
+
+                                return Ok(warp::reply::with_status(warp::reply::json(&Update {
+                                    url: format!(
+                                        "https://cdn.fabianlars.de/releases/{}/latest/{}/{}",
+                                        &app,
+                                        &platform,
+                                        &file_name.replace(".sig", "")
+                                    ),
+                                    version: file_name_splits[1].to_string(),
+                                    notes: "No patch notes provided. You might want to check the project page on GitHub.".to_string(),
+                                    pub_date,
+                                    signature,
+                                }), warp::http::StatusCode::OK));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(warp::reply::with_status(
+        warp::reply::json(&"No update available".to_string()),
+        warp::http::StatusCode::NO_CONTENT,
+    ))
 }
