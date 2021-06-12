@@ -166,7 +166,10 @@ async fn check_update_inner(
     version: String,
 ) -> Result<WithStatus<Json>, anyhow::Error> {
     let mut path_latest = dirs_next::home_dir().ok_or_else(|| anyhow::anyhow!(""))?;
-    path_latest.push(format!("wwwcdn/releases/{}/latest/{}/", &app, &platform));
+    path_latest.push(format!(
+        "cdn.fabianlars.de/releases/{}/latest/{}/",
+        &app, &platform
+    ));
 
     let mut dir = tokio::fs::read_dir(path_latest).await?;
 
