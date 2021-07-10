@@ -1,5 +1,3 @@
-use std::path::PathBuf;
-
 use chrono::{DateTime, NaiveDate, Utc};
 use reqwest::StatusCode;
 use serde::Serialize;
