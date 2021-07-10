@@ -145,20 +145,23 @@ async fn check_update(
         return Err(reject::not_found());
     };
 
-    if !["darwin", "win32", "win64", "linux"].contains(&platform.as_str()) {
+    if !["darwin", "win64", "linux"].contains(&platform.as_str()) {
         log::error!(
-            "provided platform doesn't match isn't supported: \"{}\"",
+            "provided platform doesn't match a supported value: \"{}\"",
             &platform
         );
         return Err(reject::not_found());
     };
 
-    check_update_inner(app, platform, version)
-        .await
-        .map_err(|err| {
+    let res = check_update_inner(app, platform, version).await;
+
+    Ok(match res {
+        Ok(r) => r,
+        Err(err) => {
             log::error!("Error: {:?}", err);
-            reject::not_found()
-        })
+            reply::with_status(reply::json(&"".to_string()), StatusCode::NO_CONTENT)
+        }
+    })
 }
 
 // helper
@@ -167,15 +170,17 @@ async fn check_update_inner(
     platform: String,
     version: String,
 ) -> Result<WithStatus<Json>, anyhow::Error> {
-    let path_latest = PathBuf::from(format!(
-        "{}/releases/{}/latest/{}/",
+    let mut dir = tokio::fs::read_dir(format!(
+        // Use only windows files to check for an update
+        "{}/releases/{}/latest/win64/",
         &std::env::var("CDN_DIR")?,
         &app,
-        &platform
-    ));
+    ))
+    .await?;
 
-    let mut dir = tokio::fs::read_dir(path_latest).await?;
+    let mut new_version: Option<String> = None;
 
+    // Check for update in win64 folder
     while let Some(file) = dir.next_entry().await? {
         let file_path = file.path();
         if let Some(ext) = file_path.extension() {
@@ -189,6 +194,30 @@ async fn check_update_inner(
                             .unwrap_or(CompOp::Lt)
                             == CompOp::Gt
                     {
+                        new_version = Some(file_name_splits[1].to_string());
+                    }
+                }
+            }
+        }
+    }
+
+    // Generate response if update is available
+    if let Some(new_version) = new_version {
+        dir = tokio::fs::read_dir(format!(
+            "{}/releases/{}/latest/{}/",
+            &std::env::var("CDN_DIR")?,
+            &app,
+            &platform
+        ))
+        .await?;
+
+        while let Some(file) = dir.next_entry().await? {
+            let file_path = file.path();
+            if let Some(ext) = file_path.extension() {
+                if ext == "sig" {
+                    if let Some(file_name) = file_path.file_name() {
+                        let file_name = file_name.to_string_lossy();
+
                         let created = file.metadata().await?.created()?;
                         let pub_date = DateTime::<Utc>::from(created).format("%+").to_string();
 
@@ -203,7 +232,7 @@ async fn check_update_inner(
 
                         return Ok(reply::with_status(reply::json(&Update {
                             url,
-                            version: file_name_splits[1].to_string(),
+                            version: new_version,
                             notes: "No patch notes provided. You might want to check the project page on GitHub.".to_string(),
                             pub_date,
                             signature,
