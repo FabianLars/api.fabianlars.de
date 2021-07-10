@@ -40,8 +40,8 @@ jobs:
                       ~/.cargo/registry
                       ~/.cargo/git
                       target
-                  key: ${{ runner.os }}-build-api-${{ hashFiles('**/Cargo.lock') }}
-                  restorse-keys: ${{ runner.os }}-build-api-
+                  key: ${{ runner.os }}-api-cache-${{ hashFiles('**/Cargo.lock') }}
+                  restorse-keys: ${{ runner.os }}-api-cache-
 
             - name: Set up rotations table
               run: psql -U postgres -h 127.0.0.1 -d postgres -f sql/rotations.sql
