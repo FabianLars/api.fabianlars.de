@@ -1,13 +1,18 @@
-use chrono::{DateTime, NaiveDate, Utc};
-use reqwest::StatusCode;
-use serde::Serialize;
-use sqlx::postgres::{PgPool, PgPoolOptions};
-use version_compare::{CompOp, VersionCompare};
-use warp::{
-    reject,
-    reply::{self, Json, WithStatus},
-    Filter, Rejection,
+use std::{error::Error, net::SocketAddr};
+
+use axum::{
+    extract::{Extension, UrlParams},
+    prelude::*,
+    response::IntoResponse,
+    routing::nest,
+    AddExtensionLayer,
 };
+use chrono::{DateTime, NaiveDate, Utc};
+use hyper::StatusCode;
+use serde::Serialize;
+use sqlx::{postgres::PgPoolOptions, PgPool};
+use tokio::fs::read_to_string;
+use version_compare::{CompOp, VersionCompare};
 
 #[derive(Serialize)]
 struct Rotation {
@@ -25,8 +30,13 @@ struct Update {
     signature: String,
 }
 
+enum UpdateResponse {
+    Status(StatusCode),
+    Update(Update),
+}
+
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+async fn main() -> Result<(), Box<dyn Error>> {
     pretty_env_logger::init();
 
     let pool = PgPoolOptions::new()
@@ -34,79 +44,72 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .connect(&std::env::var("DATABASE_URL")?)
         .await?;
 
-    /* Start of League of Legends Endpoints */
+    /*
+        Route handler naming scheme:
+        GET:    like rust getter functions, without a get_ prefix
+        POST:   _create suffix
+        PATCH:  _update suffix
+        DELETE: _delete suffix
+    */
 
-    let rotations = warp::path!("lol" / "rotations")
-        .and(with_db(pool.clone()))
-        .and_then(get_rotations);
+    // League of Legends (wiki) related endpoints, listening on /v1/lol/...
+    let lol_routes = route("/rotations", get(rotations))
+        .route("/rotations/:id", get(rotation))
+        .route("/rotations/latest", get(rotation_latest))
+        .layer(AddExtensionLayer::new(pool)) // This adds the db pool to the routes created above
+        .route("/champions", get(champions))
+        .route("/champions/:id", get(champion));
 
-    let rotation = warp::path!("lol" / "rotations" / u16)
-        .and(with_db(pool.clone()))
-        .and_then(get_rotation);
+    // Updater related endpoints, listening on /v1/update/...
+    let updater = route("/:app/:platform/:version", get(check_update));
 
-    let rotation_latest = warp::path!("lol" / "rotations" / "latest")
-        .and(with_db(pool.clone()))
-        .and_then(get_rotation_latest);
+    let app = nest("/v1/lol", lol_routes).nest("/v1/update", updater);
 
-    let champions = warp::path!("lol" / "champions").and(warp::fs::file("./champions.json"));
-
-    let champion = warp::path!("lol" / "champions" / u16).and_then(get_champion);
-
-    /* End of League of Legends Endpoints */
-
-    // mw-toolbox updater
-    let update = warp::path!("update" / String / String / String).and_then(check_update);
-
-    let v1 = warp::path!("v1" / ..).and(
-        champions
-            .or(champion)
-            .or(rotations)
-            .or(rotation)
-            .or(rotation_latest)
-            .or(update),
-    );
-
-    warp::serve(v1).run(([127, 0, 0, 1], 3030)).await;
+    let addr = SocketAddr::from(([127, 0, 0, 1], 3030));
+    log::debug!("listening on {}", addr);
+    hyper::Server::bind(&addr)
+        .serve(app.into_make_service())
+        .await?;
 
     Ok(())
 }
 
-// Custom Filter to pipe PgPool into functions
-fn with_db(
-    pool: PgPool,
-) -> impl Filter<Extract = (PgPool,), Error = std::convert::Infallible> + Clone {
-    warp::any().map(move || pool.clone())
+async fn champions() -> Result<impl IntoResponse, StatusCode> {
+    let file = read_to_string("./champions.json")
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    Ok(response::Json(file))
 }
 
-// endpoint
-async fn get_champion(id: u16) -> Result<String, Rejection> {
-    let file = tokio::fs::read_to_string("./champions.json")
+async fn champion(UrlParams((id,)): UrlParams<(u16,)>) -> Result<impl IntoResponse, StatusCode> {
+    let file = read_to_string("./champions.json")
         .await
-        .map_err(|_| reject::not_found())?;
-    let json: serde_json::Value = serde_json::from_str(&file).map_err(|_| reject::not_found())?;
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let json: serde_json::Value =
+        serde_json::from_str(&file).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    if let Some(champ) = json.get(id.to_string()) {
-        Ok(champ.to_string())
-    } else {
-        Err(reject::not_found())
+    match json.get(id.to_string()) {
+        Some(champ) => Ok(champ.to_string()),
+        None => Err(StatusCode::NOT_FOUND),
     }
 }
 
-// endpoint
-async fn get_rotations(pool: PgPool) -> Result<Json, Rejection> {
+async fn rotations(Extension(pool): Extension<PgPool>) -> Result<impl IntoResponse, StatusCode> {
     let rows = sqlx::query_as!(
         Rotation,
         "SELECT start_date, end_date, champions FROM rotations"
     )
     .fetch_all(&pool)
     .await
-    .map_err(|_| reject::not_found())?;
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    Ok(reply::json(&rows))
+    Ok(response::Json(rows))
 }
-
-// endpoint
-async fn get_rotation(id: u16, pool: PgPool) -> Result<Json, Rejection> {
+async fn rotation(
+    UrlParams((id,)): UrlParams<(u16,)>,
+    Extension(pool): Extension<PgPool>,
+) -> Result<impl IntoResponse, StatusCode> {
     let row = sqlx::query_as!(
         Rotation,
         "SELECT start_date, end_date, champions FROM rotations LIMIT 1 OFFSET $1",
@@ -114,33 +117,34 @@ async fn get_rotation(id: u16, pool: PgPool) -> Result<Json, Rejection> {
     )
     .fetch_one(&pool)
     .await
-    .map_err(|_| reject::not_found())?;
+    .map_err(|e| match e {
+        sqlx::Error::RowNotFound => StatusCode::NOT_FOUND,
+        _ => StatusCode::INTERNAL_SERVER_ERROR,
+    })?;
 
-    Ok(reply::json(&row))
+    Ok(response::Json(row))
 }
 
-// endpoint
-async fn get_rotation_latest(pool: PgPool) -> Result<Json, Rejection> {
+async fn rotation_latest(
+    Extension(pool): Extension<PgPool>,
+) -> Result<impl IntoResponse, StatusCode> {
     let row = sqlx::query_as!(
         Rotation,
         "SELECT start_date, end_date, champions FROM rotations ORDER BY id DESC LIMIT 1"
     )
     .fetch_one(&pool)
     .await
-    .map_err(|_| reject::not_found())?;
+    .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    Ok(reply::json(&row))
+    Ok(response::Json(row))
 }
 
-// endpoint
 async fn check_update(
-    app: String,
-    platform: String,
-    version: String,
-) -> Result<WithStatus<Json>, Rejection> {
+    UrlParams((app, platform, version)): UrlParams<(String, String, String)>,
+) -> Result<impl IntoResponse, StatusCode> {
     if !["mw-toolbox"].contains(&app.as_str()) {
         log::error!("provided app name isn't supported: \"{}\"", &app);
-        return Err(reject::not_found());
+        return Err(StatusCode::NOT_FOUND);
     };
 
     if !["darwin", "win64", "linux"].contains(&platform.as_str()) {
@@ -148,26 +152,28 @@ async fn check_update(
             "provided platform doesn't match a supported value: \"{}\"",
             &platform
         );
-        return Err(reject::not_found());
+        return Err(StatusCode::NOT_FOUND);
     };
 
-    let res = check_update_inner(app, platform, version).await;
-
-    Ok(match res {
-        Ok(r) => r,
-        Err(err) => {
+    let res = check_update_inner(app, platform, version)
+        .await
+        .map_err(|err| {
             log::error!("Error: {:?}", err);
-            reply::with_status(reply::json(&"".to_string()), StatusCode::NO_CONTENT)
-        }
-    })
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+
+    match res {
+        // NO_CONTENT isn't actually an error, but it's simpler to return it as one
+        UpdateResponse::Status(s) => Err(s),
+        UpdateResponse::Update(u) => Ok(response::Json(u)),
+    }
 }
 
-// helper
 async fn check_update_inner(
     app: String,
     platform: String,
     version: String,
-) -> Result<WithStatus<Json>, anyhow::Error> {
+) -> Result<UpdateResponse, anyhow::Error> {
     let mut dir = tokio::fs::read_dir(format!(
         // Use only windows files to check for an update
         "{}/releases/{}/latest/win64/",
@@ -228,21 +234,18 @@ async fn check_update_inner(
                             &file_name.replace(".sig", "")
                         );
 
-                        return Ok(reply::with_status(reply::json(&Update {
+                        return Ok(UpdateResponse::Update(Update {
                             url,
                             version: new_version,
                             notes: "No patch notes provided. You might want to check the project page on GitHub.".to_string(),
                             pub_date,
                             signature,
-                        }), StatusCode::OK));
+                        }));
                     }
                 }
             }
         }
     }
 
-    Ok(reply::with_status(
-        reply::json(&"No update available"),
-        StatusCode::NO_CONTENT,
-    ))
+    Ok(UpdateResponse::Status(StatusCode::NO_CONTENT))
 }
