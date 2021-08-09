@@ -1,14 +1,14 @@
 use std::{collections::HashMap, error::Error, net::SocketAddr};
 
 use axum::{
-    extract::{Extension, UrlParams},
+    extract::{Extension, Path},
+    http::StatusCode,
     prelude::*,
     response::IntoResponse,
     routing::nest,
     AddExtensionLayer,
 };
 use chrono::{DateTime, NaiveDate, Utc};
-use hyper::StatusCode;
 use serde::{Deserialize, Serialize};
 use sqlx::{postgres::PgPoolOptions, PgPool};
 use tokio::fs::read;
@@ -83,7 +83,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     let addr = SocketAddr::from(([127, 0, 0, 1], 3030));
     log::debug!("listening on {}", addr);
-    hyper::Server::bind(&addr)
+    axum::Server::bind(&addr)
         .serve(app.into_make_service())
         .await?;
 
@@ -101,7 +101,7 @@ async fn champions() -> Result<impl IntoResponse, StatusCode> {
     Ok(response::Json(json))
 }
 
-async fn champion(UrlParams((id,)): UrlParams<(u16,)>) -> Result<impl IntoResponse, StatusCode> {
+async fn champion(Path(id): Path<u16>) -> Result<impl IntoResponse, StatusCode> {
     let file = read("./champions.json")
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
@@ -126,7 +126,7 @@ async fn rotations(Extension(pool): Extension<PgPool>) -> Result<impl IntoRespon
     Ok(response::Json(rows))
 }
 async fn rotation(
-    UrlParams((id,)): UrlParams<(u16,)>,
+    Path(id): Path<u16>,
     Extension(pool): Extension<PgPool>,
 ) -> Result<impl IntoResponse, StatusCode> {
     let row = sqlx::query_as!(
@@ -159,7 +159,7 @@ async fn rotation_latest(
 }
 
 async fn check_update(
-    UrlParams((app, platform, version)): UrlParams<(String, String, String)>,
+    Path((app, platform, version)): Path<(String, String, String)>,
 ) -> Result<impl IntoResponse, StatusCode> {
     if !["mw-toolbox"].contains(&app.as_str()) {
         log::error!("provided app name isn't supported: \"{}\"", &app);
