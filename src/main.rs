@@ -2,11 +2,10 @@ use std::{collections::HashMap, error::Error, net::SocketAddr};
 
 use axum::{
     extract::{Extension, Path},
+    handler::get,
     http::StatusCode,
-    prelude::*,
-    response::IntoResponse,
-    routing::nest,
-    AddExtensionLayer,
+    response::{self, IntoResponse},
+    AddExtensionLayer, Router,
 };
 use chrono::{DateTime, NaiveDate, Utc};
 use serde::{Deserialize, Serialize};
@@ -69,7 +68,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
     */
 
     // League of Legends (wiki) related endpoints, listening on /v1/lol/...
-    let lol_routes = route("/rotations", get(rotations))
+    let lol_routes = Router::new()
+        .route("/rotations", get(rotations))
         .route("/rotations/:id", get(rotation))
         .route("/rotations/latest", get(rotation_latest))
         .layer(AddExtensionLayer::new(pool)) // This adds the db pool to the routes created above
@@ -77,9 +77,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
         .route("/champions/:id", get(champion));
 
     // Updater related endpoints, listening on /v1/update/...
-    let updater = route("/:app/:platform/:version", get(check_update));
+    let updater = Router::new().route("/:app/:platform/:version", get(check_update));
 
-    let app = nest("/v1/lol", lol_routes).nest("/v1/update", updater);
+    let app = Router::new()
+        .nest("/v1/lol", lol_routes)
+        .nest("/v1/update", updater);
 
     let addr = SocketAddr::from(([127, 0, 0, 1], 3030));
     log::debug!("listening on {}", addr);
