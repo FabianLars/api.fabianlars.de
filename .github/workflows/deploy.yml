@@ -1,70 +1,70 @@
 name: Deploy backend
 
 on:
-    push:
-        branches:
-            - main
+  push:
+    branches:
+      - main
 
 env:
-    DATABASE_URL: 'postgres://postgres:postgres@localhost:5432/postgres'
-    PGPASSWORD: postgres
+  DATABASE_URL: 'postgres://postgres:postgres@localhost:5432/postgres'
+  PGPASSWORD: postgres
 
 jobs:
-    api-v1:
-        runs-on: ubuntu-latest
+  api-v1:
+    runs-on: ubuntu-latest
 
-        services:
-            postgres:
-                image: postgres:latest
-                env:
-                    POSTGRES_DB: postgres
-                    POSTGRES_PASSWORD: postgres
-                    POSTGRES_USER: postgres
-                ports:
-                    - 5432:5432
-                options: >-
-                    --health-cmd pg_isready
-                    --health-interval 10s
-                    --health-timeout 5s
-                    --health-retries 5
+    services:
+      postgres:
+        image: postgres:latest
+        env:
+          POSTGRES_DB: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_USER: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
 
-        steps:
-            - uses: actions/checkout@v2
+    steps:
+      - uses: actions/checkout@v2
 
-            - name: Setup Rust
-              uses: hecrj/setup-rust-action@v1
+      - name: Setup Rust
+        uses: hecrj/setup-rust-action@v1
 
-            - uses: actions/cache@v2
-              with:
-                  path: |
-                      ~/.cargo/registry
-                      ~/.cargo/git
-                      target
-                  key: ${{ runner.os }}-api-cache-${{ hashFiles('**/Cargo.lock') }}
-                  restore-keys: ${{ runner.os }}-api-cache-
+      - uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-api-cache-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-api-cache-
 
-            - name: Set up rotations table
-              run: psql -U postgres -h 127.0.0.1 -d postgres -f sql/rotations.sql
+      - name: Set up rotations table
+        run: psql -U postgres -h 127.0.0.1 -d postgres -f sql/rotations.sql
 
-            - name: Build
-              run: cargo build --release
+      - name: Build
+        run: cargo build --release
 
-            - name: Move files
-              run: mv -f target/release/api dist/backend && mv -f openapi.json dist/openapi.json
+      - name: Move files
+        run: mv -f target/release/api dist/backend && mv -f openapi.json dist/openapi.json
 
-            - name: Publish
-              uses: easingthemes/ssh-deploy@main
-              with:
-                  REMOTE_HOST: ${{ secrets.SERVER_IP }}
-                  REMOTE_USER: ${{ secrets.USERNAME }}
-                  SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-                  SOURCE: 'dist/'
-                  TARGET: '~/wwwapi'
+      - name: Publish
+        uses: easingthemes/ssh-deploy@main
+        with:
+          REMOTE_HOST: ${{ secrets.SERVER_IP }}
+          REMOTE_USER: ${{ secrets.USERNAME }}
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SOURCE: 'dist/'
+          TARGET: '~/wwwapi'
 
-            - name: File permissions
-              uses: appleboy/ssh-action@master
-              with:
-                  host: ${{ secrets.SERVER_IP }}
-                  username: ${{ secrets.USERNAME }}
-                  key: ${{ secrets.SSH_PRIVATE_KEY }}
-                  script: cd ~/wwwapi && sudo ./rights.sh && sudo systemctl daemon-reload && sudo systemctl restart fabianlars.de-backend.service
+      - name: File permissions
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: cd ~/wwwapi && sudo ./rights.sh && sudo systemctl daemon-reload && sudo systemctl restart fabianlars.de-backend.service
