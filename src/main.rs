@@ -11,7 +11,7 @@ use chrono::{DateTime, NaiveDate, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::{postgres::PgPoolOptions, PgPool};
 use tokio::fs::read;
-use version_compare::{CompOp, VersionCompare};
+use version_compare::Cmp;
 
 #[derive(Deserialize, Serialize)]
 struct Champ {
@@ -215,9 +215,9 @@ async fn check_update_inner(
                     let file_name_splits: Vec<&str> = file_name.split('_').collect();
 
                     if file_name_splits.len() >= 2
-                        && VersionCompare::compare(&file_name_splits[1], &version)
-                            .unwrap_or(CompOp::Lt)
-                            == CompOp::Gt
+                        && version_compare::compare(&file_name_splits[1], &version)
+                            .unwrap_or(Cmp::Lt)
+                            == Cmp::Gt
                     {
                         new_version = Some(file_name_splits[1].to_string());
                     }
