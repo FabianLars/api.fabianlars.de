@@ -2,9 +2,9 @@ use std::{collections::HashMap, error::Error, net::SocketAddr};
 
 use axum::{
     extract::{Extension, Path},
-    handler::get,
     http::StatusCode,
     response::{self, IntoResponse},
+    routing::get,
     AddExtensionLayer, Router,
 };
 use chrono::{DateTime, NaiveDate, Utc};
