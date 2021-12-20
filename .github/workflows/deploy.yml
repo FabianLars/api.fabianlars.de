@@ -67,4 +67,4 @@ jobs:
           host: ${{ secrets.SERVER_IP }}
           username: ${{ secrets.USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          script: cd ~/wwwapi && sudo ./rights.sh && sudo systemctl daemon-reload && sudo systemctl restart fabianlars.de-backend.service
+          script: cd ~/wwwapi && sudo ./rights.sh && sudo systemctl daemon-reload && sudo systemctl restart api.fabianlars.de.service
