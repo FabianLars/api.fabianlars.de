@@ -2,10 +2,9 @@ name: CI
 
 on:
   push:
-    branches-ignore:
+    branches:
       - main
-      - 'renovate/**'
-      - '!renovate/lock-file-maintenance'
+      - 'renovate/lock-file-maintenance'
   pull_request:
 
 env:
