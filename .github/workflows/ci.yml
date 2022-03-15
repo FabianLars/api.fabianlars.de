@@ -2,21 +2,16 @@ name: CI
 
 on:
   push:
-    branches-ignore:
-      - main
-      - 'renovate/**'
-      - '!renovate/lock-file-maintenance'
-  pull_request:
 
 env:
   DATABASE_URL: 'postgres://postgres:postgres@localhost:5432/postgres'
   PGPASSWORD: postgres
   CARGO_INCREMENTAL: 0
   RUST_BACKTRACE: short
-  RUSTFLAGS: '-D warnings -W unreachable-pub -W rust-2021-compatibility'
+  RUSTFLAGS: '-D warnings'
 
 jobs:
-  cargo-test:
+  ci:
     runs-on: ubuntu-latest
 
     services:
