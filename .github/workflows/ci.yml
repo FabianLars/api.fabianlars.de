@@ -2,10 +2,6 @@ name: CI
 
 on:
   push:
-    branches:
-      - main
-      - 'renovate/lock-file-maintenance'
-  pull_request:
 
 env:
   DATABASE_URL: 'postgres://postgres:postgres@localhost:5432/postgres'
