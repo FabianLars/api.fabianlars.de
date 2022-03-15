@@ -4,7 +4,7 @@ use sqlx::PgPool;
 mod champions;
 mod rotations;
 
-pub(crate) fn router(db: PgPool) -> Router {
+pub fn router(db: PgPool) -> Router {
     Router::new()
         .route("/rotations", get(rotations::all))
         .route("/rotations/:id", get(rotations::one))

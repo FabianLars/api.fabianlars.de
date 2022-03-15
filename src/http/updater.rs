@@ -9,7 +9,7 @@ use chrono::{DateTime, Utc};
 use serde::Serialize;
 use version_compare::Cmp;
 
-pub(crate) fn router() -> Router {
+pub fn router() -> Router {
     Router::new().route(":app/:platform/:version", get(check_update))
 }
 

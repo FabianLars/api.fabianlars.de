@@ -12,7 +12,7 @@ env:
   PGPASSWORD: postgres
   CARGO_INCREMENTAL: 0
   RUST_BACKTRACE: short
-  RUSTFLAGS: '-D warnings -W unreachable-pub -W rust-2021-compatibility'
+  RUSTFLAGS: '-D warnings'
 
 jobs:
   cargo-test:

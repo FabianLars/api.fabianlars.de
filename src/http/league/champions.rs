@@ -24,7 +24,7 @@ struct Skin {
     name: String,
 }
 
-pub(crate) async fn all() -> Result<impl IntoResponse, StatusCode> {
+pub async fn all() -> Result<impl IntoResponse, StatusCode> {
     let file = read("./champions.json")
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
@@ -35,7 +35,7 @@ pub(crate) async fn all() -> Result<impl IntoResponse, StatusCode> {
     Ok(response::Json(json))
 }
 
-pub(crate) async fn one(Path(id): Path<u16>) -> Result<impl IntoResponse, StatusCode> {
+pub async fn one(Path(id): Path<u16>) -> Result<impl IntoResponse, StatusCode> {
     let file = read("./champions.json")
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;

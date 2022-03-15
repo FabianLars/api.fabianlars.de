@@ -14,9 +14,7 @@ struct Rotation {
     champions: Vec<String>,
 }
 
-pub(crate) async fn all(
-    Extension(pool): Extension<PgPool>,
-) -> Result<impl IntoResponse, StatusCode> {
+pub async fn all(Extension(pool): Extension<PgPool>) -> Result<impl IntoResponse, StatusCode> {
     let rows = sqlx::query_as!(
         Rotation,
         "SELECT start_date, end_date, champions FROM rotations"
@@ -27,7 +25,7 @@ pub(crate) async fn all(
 
     Ok(response::Json(rows))
 }
-pub(crate) async fn one(
+pub async fn one(
     Path(id): Path<u16>,
     Extension(pool): Extension<PgPool>,
 ) -> Result<impl IntoResponse, StatusCode> {
@@ -46,9 +44,7 @@ pub(crate) async fn one(
     Ok(response::Json(row))
 }
 
-pub(crate) async fn latest(
-    Extension(pool): Extension<PgPool>,
-) -> Result<impl IntoResponse, StatusCode> {
+pub async fn latest(Extension(pool): Extension<PgPool>) -> Result<impl IntoResponse, StatusCode> {
     let row = sqlx::query_as!(
         Rotation,
         "SELECT start_date, end_date, champions FROM rotations ORDER BY id DESC LIMIT 1"
