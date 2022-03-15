@@ -1,4 +1,4 @@
-name: Test
+name: CI
 
 on:
   push:
@@ -11,6 +11,9 @@ on:
 env:
   DATABASE_URL: 'postgres://postgres:postgres@localhost:5432/postgres'
   PGPASSWORD: postgres
+  CARGO_INCREMENTAL: 0
+  RUST_BACKTRACE: short
+  RUSTFLAGS: '-D warnings -W unreachable-pub -W rust-2021-compatibility'
 
 jobs:
   cargo-test:
@@ -34,23 +37,27 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - uses: hecrj/setup-rust-action@v1
+      - uses: actions-rs/toolchain@v1
         with:
-          rust-version: nightly
+          profile: minimal
+          toolchain: stable
+          components: rustfmt,clippy
 
-      - uses: actions/cache@v2
+      - uses: Swatinem/rust-cache@v1
         with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-api-test-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: ${{ runner.os }}-api-test-
+          key: ${{ secrets.CLEAR_CACHE }}
 
       - name: Set up rotations table
         run: psql -U postgres -h 127.0.0.1 -d postgres -f sql/rotations.sql
 
-      - name: Run tests
-        run: |
-          cargo test --verbose --all
-          cargo test --verbose --all --all-features
+      - name: Format
+        run: cargo fmt --all -- --check
+
+      - name: Compile
+        run: cargo test --no-run --locked
+
+      - name: Test
+        run: cargo test -- --nocapture --quiet
+
+      - name: Lints
+        run: cargo clippy

@@ -8,6 +8,9 @@ on:
 env:
   DATABASE_URL: 'postgres://postgres:postgres@localhost:5432/postgres'
   PGPASSWORD: postgres
+  CARGO_INCREMENTAL: 0
+  RUST_BACKTRACE: short
+  RUSTFLAGS: '-W unreachable-pub -W rust-2021-compatibility'
 
 jobs:
   api-v1:
@@ -31,17 +34,14 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: Setup Rust
-        uses: hecrj/setup-rust-action@v1
-
-      - uses: actions/cache@v2
+      - uses: actions-rs/toolchain@v1
         with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-api-deploy-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: ${{ runner.os }}-api-deploy-
+          profile: minimal
+          toolchain: stable
+
+      - uses: Swatinem/rust-cache@v1
+        with:
+          key: ${{ secrets.CLEAR_CACHE }}
 
       - name: Set up rotations table
         run: psql -U postgres -h 127.0.0.1 -d postgres -f sql/rotations.sql
