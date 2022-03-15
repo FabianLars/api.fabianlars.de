@@ -5,7 +5,7 @@ use axum::{
     http::StatusCode,
     response::{self, IntoResponse},
     routing::get,
-    AddExtensionLayer, Router,
+    Router,
 };
 use chrono::{DateTime, NaiveDate, Utc};
 use serde::{Deserialize, Serialize};
@@ -72,7 +72,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         .route("/rotations", get(rotations))
         .route("/rotations/:id", get(rotation))
         .route("/rotations/latest", get(rotation_latest))
-        .layer(AddExtensionLayer::new(pool)) // This adds the db pool to the routes created above
+        .layer(Extension(pool)) // This adds the db pool to the routes created above
         .route("/champions", get(champions))
         .route("/champions/:id", get(champion));
 
