@@ -10,7 +10,7 @@ use serde::Serialize;
 use version_compare::Cmp;
 
 pub fn router() -> Router {
-    Router::new().route(":app/:platform/:version", get(check_update))
+    Router::new().route("/:app/:platform/:version", get(check_update))
 }
 
 #[derive(Serialize)]
