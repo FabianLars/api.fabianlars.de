@@ -21,6 +21,6 @@ pub async fn serve(db: PgPool) -> anyhow::Result<()> {
 
 fn api_router(db: PgPool) -> Router {
     Router::new()
-        .nest("v1/lol", league::router(db))
-        .nest("v1/update", updater::router())
+        .nest("/v1/lol", league::router(db))
+        .nest("/v1/update", updater::router())
 }
