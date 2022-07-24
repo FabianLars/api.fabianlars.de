@@ -10,7 +10,7 @@ use serde::Serialize;
 use version_compare::Cmp;
 
 pub fn router() -> Router {
-    Router::new().route("/:app/:platform/:version", get(check_update))
+    Router::new().route("/:app/:platform/:arch/:version", get(check_update))
 }
 
 #[derive(Serialize)]
@@ -28,14 +28,14 @@ enum UpdateResponse {
 }
 
 async fn check_update(
-    Path((app, platform, version)): Path<(String, String, String)>,
+    Path((app, platform, arch, version)): Path<(String, String, String, String)>,
 ) -> Result<impl IntoResponse, StatusCode> {
     if !["mw-toolbox"].contains(&app.as_str()) {
         log::error!("provided app name isn't supported: \"{}\"", &app);
         return Err(StatusCode::NOT_FOUND);
     };
 
-    if !["darwin", "win64", "linux"].contains(&platform.as_str()) {
+    if !["darwin", "windows", "linux"].contains(&platform.as_str()) {
         log::error!(
             "provided platform doesn't match a supported value: \"{}\"",
             &platform
@@ -43,7 +43,15 @@ async fn check_update(
         return Err(StatusCode::NOT_FOUND);
     };
 
-    let res = check_update_inner(app, platform, version)
+    if !["x86_64", "aarch64"].contains(&arch.as_str()) {
+        log::error!(
+            "provided arch doesn't match a supported value: \"{}\"",
+            &arch
+        );
+        return Err(StatusCode::NOT_FOUND);
+    };
+
+    let res = check_update_inner(app, platform, arch, version)
         .await
         .map_err(|err| {
             log::error!("Error: {:?}", err);
@@ -60,19 +68,19 @@ async fn check_update(
 async fn check_update_inner(
     app: String,
     platform: String,
+    arch: String,
     version: String,
 ) -> Result<UpdateResponse, anyhow::Error> {
     let mut dir = tokio::fs::read_dir(format!(
-        // Use only windows files to check for an update
-        "{}/releases/{}/latest/win64/",
+        "{}/releases/{}/latest/{}/{}/",
         &std::env::var("CDN_DIR")?,
         &app,
+        &platform,
+        &arch
     ))
     .await?;
 
-    let mut new_version: Option<String> = None;
-
-    // Check for update in win64 folder
+    // Check for update
     while let Some(file) = dir.next_entry().await? {
         let file_path = file.path();
         if let Some(ext) = file_path.extension() {
@@ -86,45 +94,22 @@ async fn check_update_inner(
                             .unwrap_or(Cmp::Lt)
                             == Cmp::Gt
                     {
-                        new_version = Some(file_name_splits[1].to_string());
-                    }
-                }
-            }
-        }
-    }
-
-    // Generate response if update is available
-    if let Some(new_version) = new_version {
-        dir = tokio::fs::read_dir(format!(
-            "{}/releases/{}/latest/{}/",
-            &std::env::var("CDN_DIR")?,
-            &app,
-            &platform
-        ))
-        .await?;
-
-        while let Some(file) = dir.next_entry().await? {
-            let file_path = file.path();
-            if let Some(ext) = file_path.extension() {
-                if ext == "sig" {
-                    if let Some(file_name) = file_path.file_name() {
-                        let file_name = file_name.to_string_lossy();
-
                         let created = file.metadata().await?.created()?;
                         let pub_date = DateTime::<Utc>::from(created).format("%+").to_string();
 
                         let signature = tokio::fs::read_to_string(&file_path).await?;
 
                         let url = format!(
-                            "https://cdn.fabianlars.de/releases/{}/latest/{}/{}",
+                            "https://cdn.fabianlars.de/releases/{}/latest/{}/{}/{}",
                             &app,
                             &platform,
+                            &arch,
                             &file_name.replace(".sig", "")
                         );
 
                         return Ok(UpdateResponse::Update(Update {
                             url,
-                            version: new_version,
+                            version: file_name_splits[1].to_string(),
                             notes: "No patch notes provided. You might want to check the project page on GitHub.".to_string(),
                             pub_date,
                             signature,

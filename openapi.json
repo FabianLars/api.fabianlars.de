@@ -1,406 +1,386 @@
 {
-  "openapi": "3.0.3",
-  "info": {
-    "title": "api.fabianlars.de",
-    "description": "just some more or less random APIs\n\nv1/lol/ designed for use in LoL-Fandom wikis\n",
-    "version": "0.1"
-  },
-  "servers": [
-    {
-      "url": "https://api.fabianlars.de"
-    }
-  ],
-  "paths": {
-    "/v1/update/{app}/{target}/{current_version}": {
-      "get": {
-        "description": "Endpoint for distributed apps to check for updates.",
-        "parameters": [
-          {
-            "name": "app",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "enum": [
-                "mw-toolbox"
-              ]
-            }
-          },
-          {
-            "name": "target",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "enum": [
-                "darwin",
-                "win32",
-                "win64",
-                "linux"
-              ]
-            }
-          },
-          {
-            "name": "current_version",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Ok",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "url": {
-                      "type": "string"
-                    },
-                    "version": {
-                      "type": "string"
-                    },
-                    "notes": {
-                      "type": "string"
-                    },
-                    "pub_date": {
-                      "type": "string"
-                    },
-                    "signature": {
-                      "type": "string"
-                    }
-                  }
-                },
-                "example": {
-                  "url": "https://mycompany.example.com/myapp/releases/myrelease.tar.gz",
-                  "version": "0.0.1",
-                  "notes": "Theses are some release notes",
-                  "pub_date": "2020-09-18T12:29:53+01:00",
-                  "signature": ""
-                }
-              }
-            }
-          },
-          "204": {
-            "description": "No update available"
-          }
-        }
-      }
+    "openapi": "3.0.3",
+    "info": {
+        "title": "api.fabianlars.de",
+        "description": "just some more or less random APIs\n\nv1/lol/ designed for use in LoL-Fandom wikis\n",
+        "version": "0.1"
     },
-    "/v1/lol/rotations": {
-      "get": {
-        "description": "Get all champion rotations",
-        "responses": {
-          "200": {
-            "description": "Ok",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "type": "object",
-                    "properties": {
-                      "end_date": {
-                        "type": "string"
-                      },
-                      "champions": {
-                        "type": "array",
-                        "items": {
-                          "type": "string"
+    "servers": [
+        {
+            "url": "https://api.fabianlars.de"
+        }
+    ],
+    "paths": {
+        "/v1/update/{app}/{target}/{arch}/{current_version}": {
+            "get": {
+                "description": "Endpoint for distributed apps to check for updates.",
+                "parameters": [
+                    {
+                        "name": "app",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "enum": ["mw-toolbox"]
                         }
-                      },
-                      "start_date": {
-                        "type": "string"
-                      }
-                    }
-                  }
-                },
-                "example": [
-                  {
-                    "start_date": "2009-11-20",
-                    "end_date": "2009-12-01",
-                    "champions": [
-                      "Ashe",
-                      "Blitzcrank",
-                      "Corki",
-                      "Jax",
-                      "Heimerdinger",
-                      "Master Yi",
-                      "Ryze",
-                      "Sion",
-                      "Taric",
-                      "Warwick"
-                    ]
-                  },
-                  {
-                    "start_date": "2009-12-01",
-                    "end_date": "2009-12-08",
-                    "champions": [
-                      "Annie",
-                      "Ashe",
-                      "Blitzcrank",
-                      "Katarina",
-                      "Gangplank",
-                      "Ryze",
-                      "Singed",
-                      "Teemo",
-                      "Udyr",
-                      "Zilean"
-                    ]
-                  },
-                  "..."
-                ]
-              }
-            }
-          }
-        },
-        "servers": [
-          {
-            "url": "https://api.fabianlars.de"
-          }
-        ]
-      },
-      "servers": [
-        {
-          "url": "https://api.fabianlars.de"
-        }
-      ]
-    },
-    "/v1/lol/rotations/latest": {
-      "get": {
-        "description": "Get latest champion rotation",
-        "responses": {
-          "200": {
-            "description": "Ok",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "end_date": {
-                      "type": "string"
                     },
-                    "champions": {
-                      "type": "array",
-                      "items": {
-                        "type": "string"
-                      }
-                    },
-                    "start_date": {
-                      "type": "string"
-                    }
-                  }
-                },
-                "examples": {
-                  "latest": {
-                    "value": "{\"start_date\":\"2021-04-06\",\"end_date\":\"2021-04-13\",\"champions\":[\"Aatrox\",\"Aphelios\",\"Cho'Gath\",\"Draven\",\"Fizz\",\"Galio\",\"Leona\",\"Lissandra\",\"Olaf\",\"Senna\",\"Swain\",\"Sylas\",\"Taliyah\",\"Xin Zhao\",\"Zac\"]}"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "servers": [
-          {
-            "url": "https://api.fabianlars.de"
-          }
-        ]
-      },
-      "servers": [
-        {
-          "url": "https://api.fabianlars.de"
-        }
-      ]
-    },
-    "/v1/lol/rotations/{rotationId}": {
-      "get": {
-        "description": "Get rotation by ID/week",
-        "parameters": [
-          {
-            "name": "rotationId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Ok",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "end_date": {
-                      "type": "string"
-                    },
-                    "champions": {
-                      "type": "array",
-                      "items": {
-                        "type": "string"
-                      }
-                    },
-                    "start_date": {
-                      "type": "string"
-                    }
-                  }
-                },
-                "examples": {
-                  "1": {
-                    "value": "{\"start_date\":\"2009-11-20\",\"end_date\":\"2009-12-01\",\"champions\":[\"Ashe\",\"Blitzcrank\",\"Corki\",\"Jax\",\"Heimerdinger\",\"Master Yi\",\"Ryze\",\"Sion\",\"Taric\",\"Warwick\"]}"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "servers": [
-          {
-            "url": "https://api.fabianlars.de"
-          }
-        ]
-      },
-      "servers": [
-        {
-          "url": "https://api.fabianlars.de"
-        }
-      ]
-    },
-    "/v1/lol/champions": {
-      "get": {
-        "description": "Get all champions",
-        "responses": {
-          "200": {
-            "description": "Ok",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "type": "object",
-                    "properties": {
-                      "alias": {
-                        "type": "string"
-                      },
-                      "codename": {
-                        "type": "string"
-                      },
-                      "id": {
-                        "type": "integer"
-                      },
-                      "name": {
-                        "type": "string"
-                      },
-                      "skins": {
-                        "type": "array",
-                        "items": {
-                          "type": "object",
-                          "properties": {
-                            "id": {
-                              "type": "integer"
-                            },
-                            "id_long": {
-                              "type": "integer"
-                            },
-                            "name": {
-                              "type": "string"
-                            }
-                          }
+                    {
+                        "name": "target",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "enum": ["darwin", "windows", "linux"]
                         }
-                      }
-                    }
-                  }
-                },
-                "examples": {}
-              }
-            }
-          }
-        },
-        "servers": [
-          {
-            "url": "https://api.fabianlars.de"
-          }
-        ]
-      },
-      "servers": [
-        {
-          "url": "https://api.fabianlars.de"
-        }
-      ]
-    },
-    "/v1/lol/champions/{championId}": {
-      "get": {
-        "description": "Get champion by ID",
-        "parameters": [
-          {
-            "name": "championId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "integer"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Ok",
-            "content": {
-              "text/plain; charset=utf-8": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "alias": {
-                      "type": "string"
                     },
-                    "codename": {
-                      "type": "string"
+                    {
+                        "name": "arch",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "enum": ["x86_64", "aarch64"]
+                        }
                     },
-                    "id": {
-                      "type": "integer"
-                    },
-                    "name": {
-                      "type": "string"
-                    },
-                    "skins": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "id": {
-                            "type": "integer"
-                          },
-                          "id_long": {
-                            "type": "integer"
-                          },
-                          "name": {
+                    {
+                        "name": "current_version",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
                             "type": "string"
-                          }
                         }
-                      }
                     }
-                  }
-                },
-                "examples": {}
-              }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Ok",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "url": {
+                                            "type": "string"
+                                        },
+                                        "version": {
+                                            "type": "string"
+                                        },
+                                        "notes": {
+                                            "type": "string"
+                                        },
+                                        "pub_date": {
+                                            "type": "string"
+                                        },
+                                        "signature": {
+                                            "type": "string"
+                                        }
+                                    }
+                                },
+                                "example": {
+                                    "url": "https://mycompany.example.com/myapp/releases/myrelease.tar.gz",
+                                    "version": "0.0.1",
+                                    "notes": "Theses are some release notes",
+                                    "pub_date": "2020-09-18T12:29:53+01:00",
+                                    "signature": "abcdefghijklmnopqrstuvwxyz0123456789"
+                                }
+                            }
+                        }
+                    },
+                    "204": {
+                        "description": "No update available."
+                    }
+                }
             }
-          }
         },
-        "servers": [
-          {
-            "url": "https://api.fabianlars.de"
-          }
-        ]
-      },
-      "servers": [
-        {
-          "url": "https://api.fabianlars.de"
+        "/v1/lol/rotations": {
+            "get": {
+                "description": "Get all champion rotations",
+                "responses": {
+                    "200": {
+                        "description": "Ok",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "object",
+                                        "properties": {
+                                            "end_date": {
+                                                "type": "string"
+                                            },
+                                            "champions": {
+                                                "type": "array",
+                                                "items": {
+                                                    "type": "string"
+                                                }
+                                            },
+                                            "start_date": {
+                                                "type": "string"
+                                            }
+                                        }
+                                    }
+                                },
+                                "example": [
+                                    {
+                                        "start_date": "2009-11-20",
+                                        "end_date": "2009-12-01",
+                                        "champions": ["Ashe", "Blitzcrank", "Corki", "Jax", "Heimerdinger", "Master Yi", "Ryze", "Sion", "Taric", "Warwick"]
+                                    },
+                                    {
+                                        "start_date": "2009-12-01",
+                                        "end_date": "2009-12-08",
+                                        "champions": ["Annie", "Ashe", "Blitzcrank", "Katarina", "Gangplank", "Ryze", "Singed", "Teemo", "Udyr", "Zilean"]
+                                    },
+                                    "..."
+                                ]
+                            }
+                        }
+                    }
+                },
+                "servers": [
+                    {
+                        "url": "https://api.fabianlars.de"
+                    }
+                ]
+            },
+            "servers": [
+                {
+                    "url": "https://api.fabianlars.de"
+                }
+            ]
+        },
+        "/v1/lol/rotations/latest": {
+            "get": {
+                "description": "Get latest champion rotation",
+                "responses": {
+                    "200": {
+                        "description": "Ok",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "end_date": {
+                                            "type": "string"
+                                        },
+                                        "champions": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "string"
+                                            }
+                                        },
+                                        "start_date": {
+                                            "type": "string"
+                                        }
+                                    }
+                                },
+                                "examples": {
+                                    "latest": {
+                                        "value": "{\"start_date\":\"2021-04-06\",\"end_date\":\"2021-04-13\",\"champions\":[\"Aatrox\",\"Aphelios\",\"Cho'Gath\",\"Draven\",\"Fizz\",\"Galio\",\"Leona\",\"Lissandra\",\"Olaf\",\"Senna\",\"Swain\",\"Sylas\",\"Taliyah\",\"Xin Zhao\",\"Zac\"]}"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "servers": [
+                    {
+                        "url": "https://api.fabianlars.de"
+                    }
+                ]
+            },
+            "servers": [
+                {
+                    "url": "https://api.fabianlars.de"
+                }
+            ]
+        },
+        "/v1/lol/rotations/{rotationId}": {
+            "get": {
+                "description": "Get rotation by ID/week",
+                "parameters": [
+                    {
+                        "name": "rotationId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Ok",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "end_date": {
+                                            "type": "string"
+                                        },
+                                        "champions": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "string"
+                                            }
+                                        },
+                                        "start_date": {
+                                            "type": "string"
+                                        }
+                                    }
+                                },
+                                "examples": {
+                                    "1": {
+                                        "value": "{\"start_date\":\"2009-11-20\",\"end_date\":\"2009-12-01\",\"champions\":[\"Ashe\",\"Blitzcrank\",\"Corki\",\"Jax\",\"Heimerdinger\",\"Master Yi\",\"Ryze\",\"Sion\",\"Taric\",\"Warwick\"]}"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "servers": [
+                    {
+                        "url": "https://api.fabianlars.de"
+                    }
+                ]
+            },
+            "servers": [
+                {
+                    "url": "https://api.fabianlars.de"
+                }
+            ]
+        },
+        "/v1/lol/champions": {
+            "get": {
+                "description": "Get all champions",
+                "responses": {
+                    "200": {
+                        "description": "Ok",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "object",
+                                        "properties": {
+                                            "alias": {
+                                                "type": "string"
+                                            },
+                                            "codename": {
+                                                "type": "string"
+                                            },
+                                            "id": {
+                                                "type": "integer"
+                                            },
+                                            "name": {
+                                                "type": "string"
+                                            },
+                                            "skins": {
+                                                "type": "array",
+                                                "items": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "id": {
+                                                            "type": "integer"
+                                                        },
+                                                        "id_long": {
+                                                            "type": "integer"
+                                                        },
+                                                        "name": {
+                                                            "type": "string"
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                },
+                                "examples": {}
+                            }
+                        }
+                    }
+                },
+                "servers": [
+                    {
+                        "url": "https://api.fabianlars.de"
+                    }
+                ]
+            },
+            "servers": [
+                {
+                    "url": "https://api.fabianlars.de"
+                }
+            ]
+        },
+        "/v1/lol/champions/{championId}": {
+            "get": {
+                "description": "Get champion by ID",
+                "parameters": [
+                    {
+                        "name": "championId",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Ok",
+                        "content": {
+                            "text/plain; charset=utf-8": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "alias": {
+                                            "type": "string"
+                                        },
+                                        "codename": {
+                                            "type": "string"
+                                        },
+                                        "id": {
+                                            "type": "integer"
+                                        },
+                                        "name": {
+                                            "type": "string"
+                                        },
+                                        "skins": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "id": {
+                                                        "type": "integer"
+                                                    },
+                                                    "id_long": {
+                                                        "type": "integer"
+                                                    },
+                                                    "name": {
+                                                        "type": "string"
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                },
+                                "examples": {}
+                            }
+                        }
+                    }
+                },
+                "servers": [
+                    {
+                        "url": "https://api.fabianlars.de"
+                    }
+                ]
+            },
+            "servers": [
+                {
+                    "url": "https://api.fabianlars.de"
+                }
+            ]
         }
-      ]
     }
-  }
 }
