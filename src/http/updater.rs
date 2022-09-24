@@ -15,7 +15,6 @@ pub fn router() -> Router {
 
 #[derive(Serialize)]
 struct Update {
-    name: String,
     url: String,
     version: String,
     notes: String,
@@ -109,7 +108,6 @@ async fn check_update_inner(
                         );
 
                         return Ok(UpdateResponse::Update(Update {
-                            name: app,
                             url,
                             version: file_name_splits[1].to_string(),
                             notes: "No patch notes provided. You might want to check the project page on GitHub.".to_string(),
