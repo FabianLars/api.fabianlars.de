@@ -10,7 +10,7 @@ panic = 'abort'
 
 [dependencies]
 anyhow = "1.0"
-axum = "0.5"
+axum = "0.6"
 chrono = {version = "0.4", features = ["serde"]}
 log = "0.4"
 pretty_env_logger = "0.4"
