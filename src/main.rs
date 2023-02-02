@@ -1,4 +1,6 @@
 use api::http;
+
+#[cfg(feature = "league")]
 use sqlx::postgres::PgPoolOptions;
 
 #[tokio::main]
