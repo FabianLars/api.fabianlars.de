@@ -47,7 +47,7 @@ jobs:
         run: psql -U postgres -h 127.0.0.1 -d postgres -f sql/rotations.sql
 
       - name: Build
-        run: cargo build --release
+        run: cargo build --release --all-features
 
       - name: Move files
         run: mv -f target/release/api dist/backend && mv -f openapi.json dist/openapi.json

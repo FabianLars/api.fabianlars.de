@@ -5,6 +5,7 @@ use sqlx::postgres::PgPoolOptions;
 async fn main() -> anyhow::Result<()> {
     pretty_env_logger::init();
 
+    #[cfg(feature = "league")]
     let db = PgPoolOptions::new()
         .max_connections(5)
         .connect(&std::env::var("DATABASE_URL")?)
@@ -18,7 +19,10 @@ async fn main() -> anyhow::Result<()> {
         DELETE: _delete suffix
     */
 
-    http::serve(db).await?;
+    #[cfg(feature = "league")]
+    http::serve(Some(db)).await?;
+    #[cfg(not(feature = "league"))]
+    http::serve(None).await?;
 
     Ok(())
 }

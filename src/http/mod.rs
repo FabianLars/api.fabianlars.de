@@ -4,10 +4,11 @@ use axum::Router;
 use sqlx::PgPool;
 
 mod ipsw;
+#[cfg(feature = "league")]
 mod league;
 mod updater;
 
-pub async fn serve(db: PgPool) -> anyhow::Result<()> {
+pub async fn serve(db: Option<PgPool>) -> anyhow::Result<()> {
     let app = api_router(db);
 
     let addr = SocketAddr::from(([127, 0, 0, 1], 3030));
@@ -19,8 +20,9 @@ pub async fn serve(db: PgPool) -> anyhow::Result<()> {
     Ok(())
 }
 
-fn api_router(db: PgPool) -> Router {
-    Router::new()
-        .nest("/v1/lol", league::router(db))
-        .nest("/v1/update", updater::router())
+fn api_router(_db: Option<PgPool>) -> Router {
+    let router = Router::new().nest("/v1/update", updater::router());
+    #[cfg(feature = "league")]
+    let router = router.nest("/v1/lol", league::router(_db.unwrap()));
+    router
 }
