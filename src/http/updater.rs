@@ -27,13 +27,25 @@ enum UpdateResponse {
     Update(Update),
 }
 
+async fn app_supported(app: &str) -> Result<(), anyhow::Error> {
+    let mut dir = tokio::fs::read_dir(format!("{}/releases/", &std::env::var("CDN_DIR")?)).await?;
+
+    while let Some(entry) = dir.next_entry().await? {
+        if entry.file_name() == app {
+            return Ok(());
+        }
+    }
+
+    Err(anyhow::Error::msg("app unsupported"))
+}
+
 async fn check_update(
     Path((app, platform, arch, version)): Path<(String, String, String, String)>,
 ) -> Result<impl IntoResponse, StatusCode> {
-    if !["mw-toolbox"].contains(&app.as_str()) {
+    if app_supported(&app).await.is_err() {
         log::error!("provided app name isn't supported: \"{}\"", &app);
         return Err(StatusCode::NOT_FOUND);
-    };
+    }
 
     if !["darwin", "windows", "linux"].contains(&platform.as_str()) {
         log::error!(
@@ -41,7 +53,7 @@ async fn check_update(
             &platform
         );
         return Err(StatusCode::NOT_FOUND);
-    };
+    }
 
     if !["x86_64", "aarch64"].contains(&arch.as_str()) {
         log::error!(
@@ -49,7 +61,7 @@ async fn check_update(
             &arch
         );
         return Err(StatusCode::NOT_FOUND);
-    };
+    }
 
     let res = check_update_inner(app, platform, arch, version)
         .await
