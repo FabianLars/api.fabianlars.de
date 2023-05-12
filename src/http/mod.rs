@@ -21,8 +21,14 @@ pub async fn serve(db: Option<PgPool>) -> anyhow::Result<()> {
 }
 
 fn api_router(_db: Option<PgPool>) -> Router {
-    let router = Router::new().nest("/v1/update", updater::router());
+    let mut router = Router::new();
+
+    router = router.nest("/v1/update", updater::router());
+
     #[cfg(feature = "league")]
-    let router = router.nest("/v1/lol", league::router(_db.unwrap()));
+    {
+        router = router.nest("/v1/lol", league::router(_db.unwrap()));
+    }
+
     router
 }
